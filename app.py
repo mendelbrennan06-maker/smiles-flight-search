@@ -46,10 +46,7 @@ with st.sidebar:
         step=0.01
     )
 
-    headless = st.checkbox(
-        "Run browser hidden",
-        value=False
-    )
+    headless = True
 
 search_clicked = st.button(
     "Search flights",
