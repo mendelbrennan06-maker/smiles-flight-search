@@ -13,7 +13,7 @@ from utils import (
 
 class SmilesScraper:
 
-    def __init__(self, headless=False):
+    def __init__(self, headless=True):
         self.headless = headless
 
     def search(
@@ -51,11 +51,49 @@ class SmilesScraper:
 
             page.goto(
                 url,
-                wait_until="domcontentloaded",
+                wait_until="networkidle",
                 timeout=90000
             )
 
-            page.wait_for_timeout(12000)
+            page.wait_for_timeout(8000)
+
+            # Accept cookies if shown
+            try:
+                page.get_by_text(
+                    "Accept",
+                    exact=False
+                ).click(timeout=3000)
+            except Exception:
+                pass
+
+            try:
+                page.get_by_text(
+                    "Aceitar",
+                    exact=False
+                ).click(timeout=3000)
+            except Exception:
+                pass
+
+            page.wait_for_timeout(5000)
+
+            # Try clicking search if button exists
+            try:
+                page.get_by_text(
+                    "Search",
+                    exact=False
+                ).click(timeout=3000)
+            except Exception:
+                pass
+
+            try:
+                page.get_by_text(
+                    "Buscar",
+                    exact=False
+                ).click(timeout=3000)
+            except Exception:
+                pass
+
+            page.wait_for_timeout(10000)
 
             try:
                 debug_text = page.locator(
@@ -193,6 +231,11 @@ class SmilesScraper:
         departure = to_ampm(departure_24)
         arrival = to_ampm(arrival_24)
 
+        arrives_next_day = (
+            "(+1)" in text
+            or "+1" in text
+        )
+
         all_points = re.findall(
             r"(?:\d+[\.,]?\d*)\s*"
             r"(?:milhas|milha|miles|pontos|pts)",
@@ -279,7 +322,7 @@ class SmilesScraper:
             "arrival": arrival,
             "departure_sort": departure_24,
             "arrival_sort": arrival_24,
-            "arrives_next_day": False,
+            "arrives_next_day": arrives_next_day,
             "airline": airline,
             "economy_points": economy_points,
             "business_points": business_points,
