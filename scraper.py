@@ -1,4 +1,5 @@
 import re
+import random
 
 from playwright.sync_api import sync_playwright
 
@@ -31,17 +32,34 @@ class SmilesScraper:
         with sync_playwright() as p:
 
             browser = p.chromium.launch(
-                headless=self.headless
+                headless=self.headless,
+                args=[
+                    "--disable-blink-features=AutomationControlled",
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                ]
             )
 
             context = browser.new_context(
                 viewport={
-                    "width": 1400,
-                    "height": 1000,
-                }
+                    "width": 1440,
+                    "height": 1200,
+                },
+
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                ),
+
+                locale="en-US",
+
+                timezone_id="America/New_York",
             )
 
             page = context.new_page()
+
+            page.set_default_timeout(60000)
 
             url = build_smiles_url(
                 origin,
@@ -55,45 +73,69 @@ class SmilesScraper:
                 timeout=90000
             )
 
-            page.wait_for_timeout(8000)
+            page.wait_for_timeout(
+                random.randint(4000, 7000)
+            )
 
-            # Accept cookies if shown
+            # Cookie buttons
+            cookie_texts = [
+                "Accept",
+                "Aceitar",
+                "I agree",
+                "Concordo",
+            ]
+
+            for text in cookie_texts:
+                try:
+                    page.get_by_text(
+                        text,
+                        exact=False
+                    ).click(timeout=3000)
+
+                    page.wait_for_timeout(2000)
+
+                except Exception:
+                    pass
+
+            # Scroll like a user
             try:
-                page.get_by_text(
-                    "Accept",
-                    exact=False
-                ).click(timeout=3000)
+                page.mouse.wheel(0, 1200)
+                page.wait_for_timeout(2000)
+
+                page.mouse.wheel(0, -500)
+                page.wait_for_timeout(2000)
+
             except Exception:
                 pass
 
-            try:
-                page.get_by_text(
-                    "Aceitar",
-                    exact=False
-                ).click(timeout=3000)
-            except Exception:
-                pass
+            # Retry waiting
+            page.wait_for_timeout(
+                random.randint(6000, 12000)
+            )
 
-            page.wait_for_timeout(5000)
+            # Attempt to click search again
+            search_texts = [
+                "Search",
+                "Buscar",
+                "Pesquisar",
+            ]
 
-            # Try clicking search if button exists
-            try:
-                page.get_by_text(
-                    "Search",
-                    exact=False
-                ).click(timeout=3000)
-            except Exception:
-                pass
+            for text in search_texts:
+                try:
+                    page.get_by_text(
+                        text,
+                        exact=False
+                    ).click(timeout=3000)
 
-            try:
-                page.get_by_text(
-                    "Buscar",
-                    exact=False
-                ).click(timeout=3000)
-            except Exception:
-                pass
+                    page.wait_for_timeout(5000)
 
-            page.wait_for_timeout(10000)
+                except Exception:
+                    pass
+
+            # Final wait
+            page.wait_for_timeout(
+                random.randint(5000, 10000)
+            )
 
             try:
                 debug_text = page.locator(
@@ -107,6 +149,8 @@ class SmilesScraper:
                 "[data-testid*='flight']",
                 "[class*='flight']",
                 "[class*='Flight']",
+                "[class*='result']",
+                "[class*='Result']",
                 "[class*='card']",
                 "[class*='Card']",
             ]
@@ -124,7 +168,7 @@ class SmilesScraper:
                         cards = [
                             locator.nth(i)
                             for i in range(
-                                min(count, 80)
+                                min(count, 100)
                             )
                         ]
 
