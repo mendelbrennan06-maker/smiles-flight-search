@@ -26,7 +26,7 @@ with st.sidebar:
     ).upper().strip()
 
     destination = st.text_input(
-        "Destination airport",
+        "Destination airport or city",
         "YYZ"
     ).upper().strip()
 
@@ -46,7 +46,7 @@ with st.sidebar:
         step=0.01
     )
 
-    headless = True
+headless = True
 
 search_clicked = st.button(
     "Search flights",
@@ -55,6 +55,7 @@ search_clicked = st.button(
 
 if search_clicked:
     origins = airport_list(origin)
+    destinations = airport_list(destination)
 
     scraper = SmilesScraper(
         headless=headless
@@ -64,20 +65,21 @@ if search_clicked:
     debug_outputs = {}
 
     for airport in origins:
-        with st.status(
-            f"Searching {airport} to {destination}..."
-        ):
+        for dest_airport in destinations:
+            with st.status(
+                f"Searching {airport} to {dest_airport}..."
+            ):
 
-            flights, debug_text = scraper.search(
-                origin=airport,
-                destination=destination,
-                date_obj=date_obj,
-                max_points=max_points,
-                brl_rate=brl_rate,
-            )
+                flights, debug_text = scraper.search(
+                    origin=airport,
+                    destination=dest_airport,
+                    date_obj=date_obj,
+                    max_points=max_points,
+                    brl_rate=brl_rate,
+                )
 
-            all_flights.extend(flights)
-            debug_outputs[airport] = debug_text
+                all_flights.extend(flights)
+                debug_outputs[f"{airport}-{dest_airport}"] = debug_text
 
     st.subheader("Formatted result")
 
@@ -95,8 +97,8 @@ if search_clicked:
         )
 
     with st.expander("Debug text from Smiles page"):
-        for airport, text in debug_outputs.items():
-            st.markdown(f"### {airport}")
+        for route, text in debug_outputs.items():
+            st.markdown(f"### {route}")
             st.text(text[:15000])
 
 else:
